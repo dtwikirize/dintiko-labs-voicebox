@@ -1,0 +1,30 @@
+# Dintiko Labs Voicebox deployment for a separate Coolify Compose application.
+# Configure the hostname and HTTPS routing in Coolify to service voicebox, port 17493.
+# Do not add a host port: all browser and API access must pass through protected ingress.
+services:
+  voicebox:
+    build:
+      context: .
+      args:
+        PYTORCH_VARIANT: cpu
+    restart: unless-stopped
+    expose:
+      - "17493"
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 8G
+    environment:
+      LOG_LEVEL: info
+      NUMBA_CACHE_DIR: /tmp/numba_cache
+      VOICEBOX_FORCE_CPU: "1"
+    labels:
+      - "traefik.http.middlewares.voicebox-auth.basicauth.users=${VOICEBOX_AUTH_USERS:?Set VOICEBOX_AUTH_USERS to a bcrypt user:hash in Coolify before deployment}"
+    volumes:
+      - voicebox-data:/app/data
+      - huggingface-cache:/home/voicebox/.cache/huggingface
+
+volumes:
+  voicebox-data:
+  huggingface-cache:
