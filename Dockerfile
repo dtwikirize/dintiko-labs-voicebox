@@ -58,13 +58,23 @@ RUN if [ "$PYTORCH_VARIANT" = "rocm" ]; then \
         --index-url "https://download.pytorch.org/whl/rocm${ROCM_VERSION}" \
         torch torchaudio && \
       printf '[global]\nindex-url = https://download.pytorch.org/whl/rocm%s\nextra-index-url = https://pypi.org/simple\n' "$ROCM_VERSION" > /etc/pip.conf; \
+    elif [ "$PYTORCH_VARIANT" = "cpu" ]; then \
+      pip install --no-cache-dir --prefix=/install \
+        --index-url https://download.pytorch.org/whl/cpu \
+        torch torchaudio && \
+      printf '[global]\nindex-url = https://download.pytorch.org/whl/cpu\nextra-index-url = https://pypi.org/simple\n' > /etc/pip.conf; \
+    else \
+      echo "Unsupported PYTORCH_VARIANT: $PYTORCH_VARIANT" >&2; exit 1; \
     fi
 
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
-RUN pip install --no-cache-dir --prefix=/install --no-deps chatterbox-tts
-RUN pip install --no-cache-dir --prefix=/install --no-deps hume-tada
-RUN pip install --no-cache-dir --prefix=/install --no-deps omnivoice
-RUN pip install --no-cache-dir --prefix=/install \
+RUN python -c 'from importlib.metadata import distributions; versions = {d.metadata["Name"].lower(): d.version for d in distributions(path=["/install/lib/python3.12/site-packages"])}; assert {"torch", "torchaudio"} <= versions.keys(), versions; open("/tmp/torch-constraints.txt", "w").write("".join(f"{name}=={versions[name]}\n" for name in ("torch", "torchaudio")))'
+
+# Keep the selected accelerator-specific wheels through every dependency solve.
+RUN pip install --no-cache-dir --prefix=/install --constraint /tmp/torch-constraints.txt -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install --constraint /tmp/torch-constraints.txt --no-deps chatterbox-tts
+RUN pip install --no-cache-dir --prefix=/install --constraint /tmp/torch-constraints.txt --no-deps hume-tada
+RUN pip install --no-cache-dir --prefix=/install --constraint /tmp/torch-constraints.txt --no-deps omnivoice
+RUN pip install --no-cache-dir --prefix=/install --constraint /tmp/torch-constraints.txt \
     git+https://github.com/QwenLM/Qwen3-TTS.git
 
 
@@ -129,3 +139,4 @@ COPY --chmod=755 scripts/rocm-entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "17493"]
+
