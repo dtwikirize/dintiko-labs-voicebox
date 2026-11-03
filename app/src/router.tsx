@@ -26,12 +26,15 @@ import { VoicesTab } from '@/components/VoicesTab/VoicesTab';
 import { useGenerationProgress } from '@/lib/hooks/useGenerationProgress';
 import { useModelDownloadToast } from '@/lib/hooks/useModelDownloadToast';
 import { MODEL_DISPLAY_NAMES, useRestoreActiveTasks } from '@/lib/hooks/useRestoreActiveTasks';
+import { usePlatform } from '@/platform/PlatformContext';
 
 // Simple platform check that works in both web and Tauri
 const isMacOS = () => navigator.platform.toLowerCase().includes('mac');
 
 // Root layout component
 function RootLayout() {
+  const platform = usePlatform();
+  const isWeb = !platform.metadata.isTauri;
   // Monitor active downloads/generations and show toasts for them
   const activeDownloads = useRestoreActiveTasks();
 
@@ -43,8 +46,14 @@ function RootLayout() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar isMacOS={isMacOS()} />
 
-        <main className="flex-1 ml-20 overflow-hidden flex flex-col">
-          <div className="container mx-auto px-8 max-w-[1800px] h-full overflow-hidden flex flex-col">
+        <main
+          className={
+            isWeb
+              ? 'ml-16 flex flex-1 flex-col overflow-hidden md:ml-64'
+              : 'ml-20 flex flex-1 flex-col overflow-hidden'
+          }
+        >
+          <div className="container mx-auto flex h-full max-w-[1800px] flex-col overflow-hidden px-4 md:px-8">
             <Outlet />
           </div>
         </main>

@@ -93,7 +93,7 @@ export const useUIStore = create<UIStore>()(
       profileFormDraft: null,
       setProfileFormDraft: (draft) => set({ profileFormDraft: draft }),
 
-      theme: 'system',
+      theme: 'light',
       setTheme: (theme) => {
         set({ theme });
         applyTheme(theme);
