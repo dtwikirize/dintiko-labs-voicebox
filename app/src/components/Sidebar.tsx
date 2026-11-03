@@ -34,6 +34,7 @@ export function Sidebar({ isMacOS }: SidebarProps) {
   const matchRoute = useMatchRoute();
   const isPlayerOpen = !!usePlayerStore((s) => s.audioUrl);
   const platform = usePlatform();
+  const isWeb = !platform.metadata.isTauri;
 
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>(platform.updater.getStatus());
   useEffect(() => platform.updater.subscribe(setUpdateStatus), [platform.updater]);
@@ -41,17 +42,33 @@ export function Sidebar({ isMacOS }: SidebarProps) {
   return (
     <div
       className={cn(
-        'fixed left-0 top-0 h-full w-20 bg-sidebar border-r border-border flex flex-col items-center py-6 gap-6',
-        isMacOS && 'pt-14',
+        'fixed left-0 top-0 z-30 h-full bg-sidebar border-r border-border flex flex-col py-5 gap-7 transition-[width] duration-200',
+        isWeb ? 'w-16 items-center px-2 md:w-64 md:items-stretch md:px-5' : 'w-20 items-center',
+        isMacOS && !isWeb && 'pt-14',
       )}
     >
       {/* Logo */}
-      <div className="mb-2">
-        <img src={voiceboxLogo} alt="Voicebox" className="sidebar-logo w-12 h-12 object-contain" />
+      <div className={cn('mb-1 flex items-center', isWeb ? 'md:gap-3' : '')}>
+        <img
+          src={voiceboxLogo}
+          alt="Voicebox"
+          className={cn(
+            'sidebar-logo object-contain',
+            isWeb ? 'h-10 w-10 grayscale md:h-9 md:w-9' : 'h-12 w-12',
+          )}
+        />
+        {isWeb && (
+          <div className="hidden min-w-0 md:block">
+            <div className="text-[15px] font-semibold tracking-tight text-foreground">Voicebox</div>
+            <div className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              Dintiko Labs
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex flex-col gap-3">
+      <nav aria-label="Main navigation" className="flex w-full flex-col gap-1.5">
         {tabs.map((tab, index) => {
           const Icon = tab.icon;
           const isActive =
@@ -59,41 +76,36 @@ export function Sidebar({ isMacOS }: SidebarProps) {
               ? matchRoute({ to: '/', fuzzy: false })
               : matchRoute({ to: tab.path, fuzzy: true });
 
-          // Accent fades as buttons get further from the logo
-          const accentOpacity = Math.max(0.08, 0.5 - index * 0.07);
-
           return (
             <Link
               key={tab.id}
               to={tab.path}
               className={cn(
-                'relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 overflow-hidden',
+                'relative flex h-11 w-11 items-center justify-center rounded-full transition-colors duration-200 md:h-10 md:w-full md:justify-start md:gap-3 md:rounded-md md:px-3',
                 isActive
-                  ? 'bg-white/[0.07] text-foreground shadow-lg backdrop-blur-sm border border-white/[0.08]'
-                  : 'text-muted-foreground hover:bg-muted/50',
+                  ? 'bg-foreground text-background'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
               )}
               title={tab.label ?? (tab.labelKey ? t(tab.labelKey) : tab.id)}
               aria-label={tab.label ?? (tab.labelKey ? t(tab.labelKey) : tab.id)}
             >
-              {isActive && (
-                <div
-                  className="absolute inset-0 rounded-full pointer-events-none"
-                  style={{
-                    maskImage: 'linear-gradient(to bottom, black, transparent 60%)',
-                    WebkitMaskImage: 'linear-gradient(to bottom, black, transparent 60%)',
-                    border: `1px solid hsl(var(--accent) / ${accentOpacity})`,
-                  }}
-                />
+              <Icon className="h-[18px] w-[18px] shrink-0" />
+              {isWeb && (
+                <span className="hidden text-[13px] font-medium md:inline">
+                  {tab.label ?? (tab.labelKey ? t(tab.labelKey) : tab.id)}
+                </span>
               )}
-              <Icon className="h-5 w-5 relative z-10" />
             </Link>
           );
         })}
-      </div>
+      </nav>
 
       {/* Version */}
       <div
-        className="mt-auto flex flex-col items-center gap-1.5 transition-all duration-300"
+        className={cn(
+          'mt-auto flex flex-col items-center gap-1.5 transition-all duration-300',
+          isWeb && 'md:items-start md:px-3',
+        )}
         style={{ paddingBottom: isPlayerOpen ? '7rem' : undefined }}
       >
         <span className="text-[10px] text-muted-foreground/50">v{version}</span>
@@ -109,3 +121,4 @@ export function Sidebar({ isMacOS }: SidebarProps) {
     </div>
   );
 }
+
